@@ -1,0 +1,55 @@
+# Environment variables
+.env
+.env.*
+!.env.example
+.env
+.env.local
+.env.*.local
+
+# Node modules
+node_modules/
+dist/
+build/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# ML artifacts
+ml/artifacts/*.pkl
+ml/artifacts/*.joblib
+ml/artifacts/*.json
+!ml/artifacts/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data files (except README)
+data/*.xls
+data/*.csv
+data/*.xlsx
+data/*.pdf
+!data/README.md
+
+# Temporary files
+*.tmp
+.cache/

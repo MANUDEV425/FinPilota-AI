@@ -1,0 +1,90 @@
+.card {
+  background: rgba(26, 35, 50, 0.8);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid #1e3a5f;
+  position: relative;
+}
+
+.card h2 {
+  color: #4fd1c5;
+  margin-bottom: 1.5rem;
+  font-size: 1.25rem;
+}
+
+.placeholder {
+  color: #a0aec0;
+  font-style: italic;
+}
+
+.demo-badge {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.metric-item {
+  background: rgba(10, 25, 41, 0.6);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #1e3a5f;
+}
+
+.metric-label {
+  display: block;
+  color: #a0aec0;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.metric-value {
+  display: block;
+  color: #4fd1c5;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.meta-info {
+  padding-top: 1rem;
+  border-top: 1px solid #1e3a5f;
+  margin-bottom: 1rem;
+}
+
+.meta-info p {
+  color: #a0aec0;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.meta-info p:last-child {
+  margin-bottom: 0;
+}
+
+.synthetic-warning {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+  padding: 0.75rem;
+  color: #fbbf24;
+  font-size: 0.85rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 768px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}

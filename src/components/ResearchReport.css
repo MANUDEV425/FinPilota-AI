@@ -1,0 +1,120 @@
+.research-report {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.report-section {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #1e3a5f;
+}
+
+.report-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.report-section h3 {
+  color: #4fd1c5;
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.findings-list,
+.evidence-list,
+.missing-list,
+.risk-list,
+.reviewer-list,
+.citations-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.findings-list li,
+.evidence-list li,
+.missing-list li,
+.risk-list li,
+.reviewer-list li,
+.citations-list li {
+  color: #e0e0e0;
+  font-size: 0.9rem;
+  padding-left: 1.5rem;
+  position: relative;
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+.findings-list li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: #4fd1c5;
+  font-weight: bold;
+}
+
+.evidence-list.positive li::before {
+  content: '✓';
+  color: #4fd1c5;
+}
+
+.evidence-list.negative li::before {
+  content: '✗';
+  color: #fc8181;
+}
+
+.missing-list li::before {
+  content: '?';
+  color: #fbbf24;
+}
+
+.risk-list li::before {
+  content: '⚠';
+  color: #fbbf24;
+}
+
+.reviewer-list li::before {
+  content: '◆';
+  color: #9f7aea;
+}
+
+.citations-list li::before {
+  content: '📄';
+  color: #a0aec0;
+}
+
+.reviewer-section h3 {
+  color: #9f7aea;
+}
+
+.citations-section h3 {
+  color: #a0aec0;
+}
+
+.citation-link {
+  color: #4fd1c5;
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.citation-link:hover {
+  color: #38b2ac;
+  text-decoration: underline;
+}
+
+.report-disclaimer {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+  padding: 0.75rem;
+  color: #fbbf24;
+  font-size: 0.85rem;
+  margin-top: 1rem;
+  line-height: 1.4;
+}
+
+.report-disclaimer strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}

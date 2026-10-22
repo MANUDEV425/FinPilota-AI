@@ -1,0 +1,194 @@
+.ml-risk-card {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.prediction-section {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #1e3a5f;
+}
+
+.prediction-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.prediction-label {
+  color: #a0aec0;
+  font-size: 0.9rem;
+}
+
+.prediction-value {
+  color: #4fd1c5;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.probability-section {
+  margin-top: 1rem;
+}
+
+.probability-label {
+  display: block;
+  color: #a0aec0;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.probability-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.probability-bar {
+  height: 24px;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.probability-value {
+  color: #4fd1c5;
+  font-weight: 700;
+  font-size: 1.1rem;
+  min-width: 60px;
+}
+
+.risk-badge {
+  display: inline-block;
+  padding: 0.35rem 0.75rem;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.model-info {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #1e3a5f;
+}
+
+.model-info h3 {
+  color: #4fd1c5;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.info-item {
+  background: rgba(10, 25, 41, 0.6);
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #1e3a5f;
+}
+
+.info-label {
+  display: block;
+  color: #a0aec0;
+  font-size: 0.8rem;
+  margin-bottom: 0.25rem;
+}
+
+.info-value {
+  display: block;
+  color: #e0e0e0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.feature-importance {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #1e3a5f;
+}
+
+.feature-importance h3 {
+  color: #4fd1c5;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+
+.importance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.importance-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.feature-name {
+  color: #a0aec0;
+  font-size: 0.85rem;
+}
+
+.importance-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.importance-bar {
+  height: 8px;
+  background: #4fd1c5;
+  border-radius: 2px;
+  min-width: 40px;
+}
+
+.importance-value {
+  color: #4fd1c5;
+  font-size: 0.85rem;
+  font-weight: 600;
+  min-width: 50px;
+  text-align: right;
+}
+
+.limitations {
+  margin-bottom: 1rem;
+}
+
+.limitations h3 {
+  color: #fbbf24;
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.limitations-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.limitations-list li {
+  color: #e0e0e0;
+  font-size: 0.85rem;
+  padding-left: 1.25rem;
+  position: relative;
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+}
+
+.limitations-list li::before {
+  content: '⚠';
+  position: absolute;
+  left: 0;
+  color: #fbbf24;
+}
+
+@media (max-width: 768px) {
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+}
