@@ -31,8 +31,8 @@ from schemas import HoldingItem, InvestmentHorizon, PortfolioInput, RiskProfile
 # ── Configuration ──────────────────────────────────────────────────────────────
 # Paste the Orchestrator's address here (printed on startup), or set it in .env
 ORCHESTRATOR_ADDRESS: str = os.getenv(
-    "ORCHESTRATOR_AGENT_ADDRESS",
-    "agent1qg9wlw06ulhcjcwvfghyrtkdyzcfngaf4jsysdtughqfu8swlp9ryrk2vzm",
+    "AGENTVERSE_HOSTED_AGENT_ADDRESS",
+    "agent1qvare53hdnf78hrlt0mne8thz7zpk0rv0z5hzat4xedt76d2c60muqu5rut",
 )
 
 TRIGGER_SEED: str = "trigger_client_seed_finpilot_ai_v1_not_production"
