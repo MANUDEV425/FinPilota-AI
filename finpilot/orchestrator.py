@@ -518,39 +518,27 @@ async def handle_researcher_response(
         msg.tokens_used,
     )
 
-    # ── Build the formatted report string (shared for console + ASI:One reply)
-    border: str = "=" * 72
-    thin: str = "-" * 72
-    lines: List[str] = []
-    lines.append(border)
-    lines.append("  *  FINPILOT AI – INVESTMENT RESEARCH REPORT")
-    lines.append(
-        f"  [i] Model: {msg.model_used}   |  Tokens: {msg.tokens_used:,}   |  ID: {msg.request_id}"
-    )
-    lines.append(border)
-    lines.append("")
-    lines.append(">  BULL ANALYST PERSPECTIVE")
-    lines.append(thin)
-    for p in msg.bull_analyst_thesis.strip().split("\n\n"):
-        lines.append(textwrap.fill(p.strip(), width=72))
-        lines.append("")
-    lines.append(">  BEAR ANALYST PERSPECTIVE")
-    lines.append(thin)
-    for p in msg.bear_analyst_thesis.strip().split("\n\n"):
-        lines.append(textwrap.fill(p.strip(), width=72))
-        lines.append("")
-    lines.append("[!] RISK ASSESSMENT & PORTFOLIO FIT")
-    lines.append(thin)
-    for p in msg.risk_assessment.strip().split("\n\n"):
-        lines.append(textwrap.fill(p.strip(), width=72))
-        lines.append("")
-    lines.append("[*] FINAL SYNTHESIS & RECOMMENDATION")
-    lines.append(thin)
-    for p in msg.final_synthesis.strip().split("\n\n"):
-        lines.append(textwrap.fill(p.strip(), width=72))
-        lines.append("")
-    lines.append(border)
-    report_text: str = "\n".join(lines)
+    # ── Build rich Markdown report for ASI:One chat UI
+    md_lines = [
+        "## 📊 FinPilot AI – Indian Equity Research Report",
+        f"**Model**: `{msg.model_used}` | **Tokens**: {msg.tokens_used:,} | **Session ID**: `{msg.request_id}`",
+        "",
+        "### 🐂 Bull Analyst Perspective",
+        f"{msg.bull_analyst_thesis}",
+        "",
+        "### 🐻 Bear Analyst Perspective",
+        f"{msg.bear_analyst_thesis}",
+        "",
+        "### 🛡️ Risk Assessment & Portfolio Fit",
+        f"{msg.risk_assessment}",
+        "",
+        "### ⭐ Final Synthesis & Recommendation",
+        f"{msg.final_synthesis}",
+        "",
+        "---",
+        "_Disclaimer: For research only. FinPilot AI is not a SEBI-registered investment advisor._",
+    ]
+    report_text: str = "\n".join(md_lines)
 
     # ── Print to local console
     print()
@@ -723,20 +711,8 @@ async def handle_chat_message(ctx: Context, sender: str, msg: ChatMessage) -> No
         request_id,
     )
 
-    # ── Step 5: Interim "working…" message to the user
-    ack_text = (
-        f"⏳ FinPilot AI received your portfolio ({len(portfolio_input.holdings)} holding(s)).\n"
-        "Running: live price fetch → quantitative screening → AI thesis generation.\n"
-        "Your investment report will arrive in this chat in ~30–60 seconds."
-    )
-    await ctx.send(
-        sender,
-        ChatMessage(
-            timestamp=datetime.now(timezone.utc),
-            msg_id=uuid4(),
-            content=[TextContent(type="text", text=ack_text)],
-        ),
-    )
+    # ── Step 5: Skip interim message so ASI:One does not stall in "AI working" state
+    ctx.logger.info("[ACP] Processing request for %s without premature interim message...", sender)
 
     # ── Step 6: Inject into the Phase 1–2 pipeline
     await handle_portfolio_input(ctx, sender, portfolio_input)
