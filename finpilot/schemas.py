@@ -134,8 +134,7 @@ class PortfolioInput(Model):
     """
 
     holdings: List[HoldingItem] = Field(
-        ...,
-        min_items=1,
+        default_factory=list,
         title="Portfolio Holdings",
         description=(
             "Your current NSE equity positions. Each entry requires: "

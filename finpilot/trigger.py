@@ -32,7 +32,7 @@ from schemas import HoldingItem, InvestmentHorizon, PortfolioInput, RiskProfile
 # Paste the Orchestrator's address here (printed on startup), or set it in .env
 ORCHESTRATOR_ADDRESS: str = os.getenv(
     "ORCHESTRATOR_AGENT_ADDRESS",
-    "REPLACE_WITH_ORCHESTRATOR_ADDRESS",
+    "agent1qg50aedfvdmfg336uffcrzsk8kgavyq7pxqwfceh39ehcrexhhr46suasyp",
 )
 
 TRIGGER_SEED: str = "trigger_client_seed_finpilot_ai_v1_not_production"
@@ -64,7 +64,7 @@ trigger = Agent(
 
 @trigger.on_event("startup")
 async def send_portfolio(ctx: Context) -> None:
-    if ORCHESTRATOR_ADDRESS == "REPLACE_WITH_ORCHESTRATOR_ADDRESS":
+    if ORCHESTRATOR_ADDRESS == "agent1qg50aedfvdmfg336uffcrzsk8kgavyq7pxqwfceh39ehcrexhhr46suasyp":
         ctx.logger.error(
             "Set ORCHESTRATOR_AGENT_ADDRESS in .env or edit trigger.py directly."
         )

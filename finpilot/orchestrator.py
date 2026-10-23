@@ -40,7 +40,10 @@ from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 import pandas as pd
-import yfinance as yf
+try:
+    import yfinance as yf
+except ImportError:
+    yf = None
 from dotenv import load_dotenv
 from uagents import Agent, Context, Model, Protocol
 from uagents_core.contrib.protocols.chat import (
@@ -95,14 +98,14 @@ ORCHESTRATOR_PORT: int = int(os.getenv("ORCHESTRATOR_PORT", "8001"))
 # Format: "agent1q..." (Bech32-encoded public key hash)
 SCREENER_AGENT_ADDRESS: str = os.getenv(
     "SCREENER_AGENT_ADDRESS",
-    "REPLACE_WITH_SCREENER_ADDRESS",
+    "agent1qgrmhgl5z5exyd7wre4v0t38lu64hcwwqde56eym9x55w7pk6whzcu3karf",
 )
 
 # ── DeepResearcher Agent address ────────────────────────────────────────────
 # After running researcher.py once, paste its printed address here (or .env).
 RESEARCHER_AGENT_ADDRESS: str = os.getenv(
     "RESEARCHER_AGENT_ADDRESS",
-    "REPLACE_WITH_RESEARCHER_ADDRESS",
+    "agent1qtzv0v7hcpc7dvk23e7ugzsh29edr7v07r5elflddjj5e8axq6f6zn0d3d4",
 )
 
 # ── Agentverse Mailbox ─────────────────────────────────────────────────────────
@@ -158,6 +161,8 @@ def _fetch_live_price(ticker: str) -> Optional[float]:
     Uses a 5-day window to tolerate non-trading days.
     """
     try:
+        if yf is None:
+            return None
         data: pd.DataFrame = yf.download(
             ticker,
             period="5d",
@@ -194,6 +199,16 @@ def _build_portfolio_snapshot(
     total_invested: float = 0.0
     current_value: float = 0.0
     rows: List[Dict[str, Any]] = []
+
+    if not holdings:
+        return PortfolioSnapshot(
+            request_id=request_id,
+            total_invested_inr=0.0,
+            current_value_inr=0.0,
+            absolute_pnl_inr=0.0,
+            pct_pnl=0.0,
+            holdings_with_weights=[],
+        )
 
     for holding in holdings:
         cost_basis: float = holding.shares * holding.average_buy_price
@@ -500,18 +515,25 @@ async def handle_researcher_response(
     )
     lines.append(border)
     lines.append("")
-    lines.append("▶  INVESTMENT THESIS")
+    lines.append("▶  BULL ANALYST PERSPECTIVE")
     lines.append(thin)
-    for paragraph in msg.investment_thesis.strip().split("\n\n"):
-        lines.append(textwrap.fill(paragraph.strip(), width=72))
+    for p in msg.bull_analyst_thesis.strip().split("\n\n"):
+        lines.append(textwrap.fill(p.strip(), width=72))
         lines.append("")
+    lines.append("▶  BEAR ANALYST PERSPECTIVE")
     lines.append(thin)
-    lines.append("⚠  RISK FACTORS")
+    for p in msg.bear_analyst_thesis.strip().split("\n\n"):
+        lines.append(textwrap.fill(p.strip(), width=72))
+        lines.append("")
+    lines.append("⚠  RISK ASSESSMENT & PORTFOLIO FIT")
     lines.append(thin)
-    for idx, (category, description) in enumerate(msg.risk_factors.items(), start=1):
-        lines.append(f"  {idx}. [{category.upper()}]")
-        for line in textwrap.wrap(description, width=68):
-            lines.append(f"     {line}")
+    for p in msg.risk_assessment.strip().split("\n\n"):
+        lines.append(textwrap.fill(p.strip(), width=72))
+        lines.append("")
+    lines.append("★  FINAL SYNTHESIS & RECOMMENDATION")
+    lines.append(thin)
+    for p in msg.final_synthesis.strip().split("\n\n"):
+        lines.append(textwrap.fill(p.strip(), width=72))
         lines.append("")
     lines.append(border)
     report_text: str = "\n".join(lines)
@@ -592,34 +614,86 @@ async def handle_chat_message(ctx: Context, sender: str, msg: ChatMessage) -> No
     raw_text = raw_text.strip()
     ctx.logger.info("[ACP] Payload text: %s", raw_text[:300])
 
-    # ── Step 3: Parse JSON → PortfolioInput
+        # ── Step 3: Resilient Parse: JSON, CSV shorthand, or Natural Language
+    portfolio_input = None
     try:
-        payload: dict = json.loads(raw_text)
-        portfolio_input = PortfolioInput(**payload)
-    except (json.JSONDecodeError, ValueError, TypeError) as exc:
-        ctx.logger.warning("[ACP] Failed to parse PortfolioInput: %s", exc)
-        error_text = (
-            "❌ FinPilot AI could not parse your request.\n\n"
-            "Please send a JSON object with this structure:\n\n"
-            "{\n"
-            '  "holdings": [\n'
-            '    {"ticker": "RELIANCE.NS", "shares": 10, "average_buy_price": 2450},\n'
-            '    {"ticker": "TCS.NS",      "shares": 5,  "average_buy_price": 3800}\n'
-            "  ],\n"
-            '  "investment_horizon": "long",\n'
-            '  "risk_profile": "moderate"\n'
-            "}\n\n"
-            f"Parse error: {exc}"
+        # 1. Try strict JSON parse first
+        try:
+            payload: dict = json.loads(raw_text)
+            portfolio_input = PortfolioInput(**payload)
+        except (json.JSONDecodeError, TypeError, ValueError):
+            pass
+
+        # 2. Try single-holding CSV shorthand: TCS.NS,30,3000
+        if portfolio_input is None and "," in raw_text:
+            parts = [part.strip() for part in raw_text.split(",")]
+            if len(parts) == 3:
+                try:
+                    ticker, shares_text, price_text = parts
+                    ticker = ticker.upper()
+                    if not ticker.endswith((".NS", ".BO")):
+                        ticker = f"{ticker}.NS"
+                    portfolio_input = PortfolioInput(
+                        holdings=[HoldingItem(
+                            ticker=ticker,
+                            shares=float(shares_text),
+                            average_buy_price=float(price_text),
+                        )],
+                        investment_horizon=InvestmentHorizon.LONG,
+                        risk_profile=RiskProfile.MODERATE,
+                    )
+                except Exception:
+                    pass
+
+        # 3. Resilient Natural Language / Vague Prompt Parser
+        if portfolio_input is None:
+            ctx.logger.info("[ACP] Parsing natural language / vague query: %s", raw_text)
+            lowered = raw_text.lower()
+
+            # Detect Investment Horizon
+            horizon = InvestmentHorizon.LONG
+            if any(w in lowered for w in ["short", "month", "weeks", "swing", "quick", "near term"]):
+                horizon = InvestmentHorizon.SHORT
+            elif any(w in lowered for w in ["medium", "quarter", "mid term", "6 month", "1 year"]):
+                horizon = InvestmentHorizon.MEDIUM
+
+            # Detect Risk Profile
+            risk = RiskProfile.MODERATE
+            if any(w in lowered for w in ["safe", "conservative", "preservation", "low risk", "defensive", "dividend"]):
+                risk = RiskProfile.CONSERVATIVE
+            elif any(w in lowered for w in ["aggressive", "growth", "high risk", "alpha", "multibagger", "momentum"]):
+                risk = RiskProfile.AGGRESSIVE
+
+            # Extract any ticker mentions if present
+            found_holdings = []
+            known_tickers = [
+                "RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "ITC",
+                "SBIN", "BHARTIARTL", "KOTAKBANK", "LT", "HINDUNILVR",
+                "AXISBANK", "BAJFINANCE", "TATAMOTORS", "SUNPHARMA", "MARUTI",
+                "TITAN", "TATASTEEL", "NTPC", "ONGC", "WIPRO", "HCLTECH"
+            ]
+            for sym in known_tickers:
+                if re.search(r"" + sym + r"", raw_text, re.IGNORECASE):
+                    found_holdings.append(HoldingItem(
+                        ticker=f"{sym}.NS",
+                        shares=10.0,
+                        average_buy_price=1000.0,
+                    ))
+
+            portfolio_input = PortfolioInput(
+                holdings=found_holdings,
+                investment_horizon=horizon,
+                risk_profile=risk,
+            )
+
+    except Exception as exc:
+        ctx.logger.warning("[ACP] Fallback parsing triggered: %s", exc)
+        portfolio_input = PortfolioInput(
+            holdings=[],
+            investment_horizon=InvestmentHorizon.LONG,
+            risk_profile=RiskProfile.MODERATE,
         )
-        await ctx.send(
-            sender,
-            ChatMessage(
-                timestamp=datetime.now(timezone.utc),
-                msg_id=uuid4(),
-                content=[TextContent(type="text", text=error_text)],
-            ),
-        )
-        return
+
 
     # ── Step 4: Assign request_id and register the ASI:One sender
     request_id: str = portfolio_input.request_id or str(uuid4())[:8]
