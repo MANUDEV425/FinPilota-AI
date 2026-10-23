@@ -36,7 +36,7 @@ ORCHESTRATOR_ADDRESS: str = os.getenv(
 )
 
 TRIGGER_SEED: str = "trigger_client_seed_finpilot_ai_v1_not_production"
-TRIGGER_PORT: int = int(os.getenv("TRIGGER_PORT", "8003"))
+TRIGGER_PORT: int = int(os.getenv("TRIGGER_PORT", "8099"))
 
 # ── Sample portfolio (edit freely) ─────────────────────────────────────────────
 SAMPLE_PORTFOLIO = PortfolioInput(
@@ -64,7 +64,7 @@ trigger = Agent(
 
 @trigger.on_event("startup")
 async def send_portfolio(ctx: Context) -> None:
-    if ORCHESTRATOR_ADDRESS == "agent1qg9wlw06ulhcjcwvfghyrtkdyzcfngaf4jsysdtughqfu8swlp9ryrk2vzm":
+    if not ORCHESTRATOR_ADDRESS or ORCHESTRATOR_ADDRESS == "REPLACE_WITH_ORCHESTRATOR_ADDRESS":
         ctx.logger.error(
             "Set ORCHESTRATOR_AGENT_ADDRESS in .env or edit trigger.py directly."
         )
@@ -73,7 +73,12 @@ async def send_portfolio(ctx: Context) -> None:
     ctx.logger.info("Sending sample PortfolioInput to Orchestrator…")
     ctx.logger.info("  Holdings: %s", [h.ticker for h in SAMPLE_PORTFOLIO.holdings])
     await ctx.send(ORCHESTRATOR_ADDRESS, SAMPLE_PORTFOLIO)
-    ctx.logger.info("Message sent. Watch the Orchestrator and Screener terminals.")
+    ctx.logger.info("Message sent successfully to Orchestrator!")
+    import asyncio
+    await asyncio.sleep(2)
+    ctx.logger.info("Test payload dispatched. Shutting down trigger client.")
+    import sys
+    os._exit(0)
 
 
 if __name__ == "__main__":

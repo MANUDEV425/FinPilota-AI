@@ -519,32 +519,32 @@ async def handle_researcher_response(
     )
 
     # ── Build the formatted report string (shared for console + ASI:One reply)
-    border: str = "═" * 72
-    thin: str = "─" * 72
+    border: str = "=" * 72
+    thin: str = "-" * 72
     lines: List[str] = []
     lines.append(border)
     lines.append("  *  FINPILOT AI – INVESTMENT RESEARCH REPORT")
     lines.append(
-        f"  ℹ  Model: {msg.model_used}   │  Tokens: {msg.tokens_used:,}   │  ID: {msg.request_id}"
+        f"  [i] Model: {msg.model_used}   |  Tokens: {msg.tokens_used:,}   |  ID: {msg.request_id}"
     )
     lines.append(border)
     lines.append("")
-    lines.append("▶  BULL ANALYST PERSPECTIVE")
+    lines.append(">  BULL ANALYST PERSPECTIVE")
     lines.append(thin)
     for p in msg.bull_analyst_thesis.strip().split("\n\n"):
         lines.append(textwrap.fill(p.strip(), width=72))
         lines.append("")
-    lines.append("▶  BEAR ANALYST PERSPECTIVE")
+    lines.append(">  BEAR ANALYST PERSPECTIVE")
     lines.append(thin)
     for p in msg.bear_analyst_thesis.strip().split("\n\n"):
         lines.append(textwrap.fill(p.strip(), width=72))
         lines.append("")
-    lines.append("⚠  RISK ASSESSMENT & PORTFOLIO FIT")
+    lines.append("[!] RISK ASSESSMENT & PORTFOLIO FIT")
     lines.append(thin)
     for p in msg.risk_assessment.strip().split("\n\n"):
         lines.append(textwrap.fill(p.strip(), width=72))
         lines.append("")
-    lines.append("*  FINAL SYNTHESIS & RECOMMENDATION")
+    lines.append("[*] FINAL SYNTHESIS & RECOMMENDATION")
     lines.append(thin)
     for p in msg.final_synthesis.strip().split("\n\n"):
         lines.append(textwrap.fill(p.strip(), width=72))
@@ -554,7 +554,10 @@ async def handle_researcher_response(
 
     # ── Print to local console
     print()
-    print(report_text)
+    try:
+        print(report_text)
+    except Exception:
+        print(report_text.encode("ascii", errors="replace").decode("ascii"))
     print()
 
     # ── [Phase 3] Reply to original ASI:One sender if this came via chat
