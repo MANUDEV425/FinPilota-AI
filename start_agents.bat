@@ -24,7 +24,7 @@ start "FinPilot - Orchestrator Agent" cmd /k "python finpilot/orchestrator.py"
 echo.
 echo ============================================================================
 echo All 3 Fetch.ai agents are running!
-echo - Orchestrator: agent1qg50aedfvdmfg336uffcrzsk8kgavyq7pxqwfceh39ehcrexhhr46suasyp (Port 8000)
+echo - Orchestrator: agent1qg9wlw06ulhcjcwvfghyrtkdyzcfngaf4jsysdtughqfu8swlp9ryrk2vzm (Port 8000)
 echo - QuantScreener: agent1qgrmhgl5z5exyd7wre4v0t38lu64hcwwqde56eym9x55w7pk6whzcu3karf (Port 8002)
 echo - DeepResearcher: agent1qtzv0v7hcpc7dvk23e7ugzsh29edr7v07r5elflddjj5e8axq6f6zn0d3d4 (Port 8004)
 echo.

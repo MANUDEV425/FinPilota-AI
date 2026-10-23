@@ -129,13 +129,27 @@ _pending_chat_senders: Dict[str, str] = {}
 # mailbox=True: Agentverse buffers inbound messages when this process is
 # offline, so the agent remains reachable 24/7 on the decentralised network.
 # The seed is REQUIRED for a stable, deterministic agent address.
-orchestrator = Agent(
-    name="FinPilotOrchestrator",
-    seed=ORCHESTRATOR_SEED,
-    port=ORCHESTRATOR_PORT,
-    endpoint=[f"http://localhost:{ORCHESTRATOR_PORT}/submit"],
-    mailbox=True,
-)
+AGENTVERSE_KEY: str = os.getenv("AGENTVERSE_KEY", "")
+
+if AGENTVERSE_KEY:
+    _mailbox_spec = (
+        f"{AGENTVERSE_KEY}@https://agentverse.ai"
+        if "@" not in AGENTVERSE_KEY
+        else AGENTVERSE_KEY
+    )
+    orchestrator = Agent(
+        name="FinPilotOrchestrator",
+        seed=ORCHESTRATOR_SEED,
+        port=ORCHESTRATOR_PORT,
+        mailbox=_mailbox_spec,
+    )
+else:
+    orchestrator = Agent(
+        name="FinPilotOrchestrator",
+        seed=ORCHESTRATOR_SEED,
+        port=ORCHESTRATOR_PORT,
+        endpoint=[f"http://localhost:{ORCHESTRATOR_PORT}/submit"],
+    )
 
 # ── Agent Chat Protocol (ACP) – required for ASI:One discoverability ───────────
 # We instantiate the standard spec from uagents_core so the manifest hash
