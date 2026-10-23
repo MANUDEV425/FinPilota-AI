@@ -343,7 +343,7 @@ def _log_portfolio_snapshot(snapshot: PortfolioSnapshot) -> None:
 async def handle_startup(ctx: Context) -> None:
     """Log the agent's address on startup so we can configure other agents."""
     ctx.logger.info("" * 70)
-    ctx.logger.info("★  FinPilot AI Orchestrator Agent started")
+    ctx.logger.info("*  FinPilot AI Orchestrator Agent started")
     ctx.logger.info("" * 70)
     ctx.logger.info("  Address    : %s", ctx.agent.address)
     ctx.logger.info("  Port       : %d", ORCHESTRATOR_PORT)
@@ -362,7 +362,7 @@ async def handle_startup(ctx: Context) -> None:
     )
     ctx.logger.info("" * 70)
     ctx.logger.info(
-        "  ►  NEXT STEP: Open the Agent Inspector URL printed above in your "
+        "  >  NEXT STEP: Open the Agent Inspector URL printed above in your "
         "browser, click 'Connect', and select 'Mailbox' to bind this agent "
         "to Agentverse."
     )
@@ -523,7 +523,7 @@ async def handle_researcher_response(
     thin: str = "─" * 72
     lines: List[str] = []
     lines.append(border)
-    lines.append("  ★  FINPILOT AI – INVESTMENT RESEARCH REPORT")
+    lines.append("  *  FINPILOT AI – INVESTMENT RESEARCH REPORT")
     lines.append(
         f"  ℹ  Model: {msg.model_used}   │  Tokens: {msg.tokens_used:,}   │  ID: {msg.request_id}"
     )
@@ -544,7 +544,7 @@ async def handle_researcher_response(
     for p in msg.risk_assessment.strip().split("\n\n"):
         lines.append(textwrap.fill(p.strip(), width=72))
         lines.append("")
-    lines.append("★  FINAL SYNTHESIS & RECOMMENDATION")
+    lines.append("*  FINAL SYNTHESIS & RECOMMENDATION")
     lines.append(thin)
     for p in msg.final_synthesis.strip().split("\n\n"):
         lines.append(textwrap.fill(p.strip(), width=72))
