@@ -2,7 +2,7 @@
 # Install with: pip install -r requirements.txt
 
 # ── Fetch.ai Agent Framework ──────────────────────────────────────────────────
-uagents==0.13.0
+uagents>=0.25.5
 
 # ── Market Data ───────────────────────────────────────────────────────────────
 yfinance>=0.2.40

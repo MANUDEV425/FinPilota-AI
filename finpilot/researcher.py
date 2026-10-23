@@ -5,18 +5,17 @@ Responsibilities
 ----------------
 1. Receive a `ResearchRequest` from the Orchestrator carrying the quant-
    screened ticker shortlist plus inline fundamental context (MCap, P/E,
-   52-week high, current price).
+   52-week high, current price, MA50 momentum).
 2. Build a deterministic, richly-contextualised LLM prompt that instructs
-   the model to reason as a Quantitative Portfolio Manager covering Indian
-   equities.
+   the model to reason as three distinct analysts (Bull, Bear, Risk) covering
+   Indian equities.
 3. Call the OpenAI Chat Completions API (gpt-4o-mini by default) requesting
-   a structured JSON response: two-paragraph investment thesis + 3 labelled
-   risk factors.
+   a structured JSON response with four perspectives.
 4. Parse the JSON response into an `AgenticThesisResponse` and send it back
    to the Orchestrator.
 
 Structured output strategy
----------------------------
+--------------------------
 We use OpenAI's `response_format={"type": "json_object"}` mode (supported by
 gpt-4o-mini) and include the exact JSON schema in the system prompt.  This
 gives us deterministic, parse-safe output without needing function-calling or
@@ -32,7 +31,6 @@ import json
 import logging
 import os
 import sys
-import textwrap
 from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
@@ -77,7 +75,7 @@ OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
 OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
 # Token budget: gpt-4o-mini context is 128k; we stay well within limits.
-MAX_COMPLETION_TOKENS: int = int(os.getenv("MAX_COMPLETION_TOKENS", "1024"))
+MAX_COMPLETION_TOKENS: int = int(os.getenv("MAX_COMPLETION_TOKENS", "2048"))
 
 # ── Horizon / risk label maps for the LLM prompt ──────────────────────────────
 _HORIZON_LABELS: Dict[str, str] = {
@@ -118,42 +116,76 @@ def _get_openai_client() -> OpenAI:
 
 _SYSTEM_PROMPT: str = """\
 You are a senior Quantitative Portfolio Manager specialising in Indian equities
-(NSE/BSE listed stocks).  You have deep expertise in the Indian macroeconomic
+(NSE/BSE listed stocks). You have deep expertise in the Indian macroeconomic
 environment, RBI monetary policy, sectoral rotation, SEBI regulations, and
 fundamental analysis.
 
 You will receive a shortlist of stocks that have already passed rigorous
-quantitative filters (P/E ≤ 50, market cap ≥ ₹10,000 Cr, ranked by composite
-score of valuation, size, and price momentum).
+quantitative filters:
+  • Trailing P/E > 0 and < 40
+  • Price-to-Book < 6
+  • Current price > 50-day moving average
+  • Ranked by composite score (valuation, size, momentum)
 
 Your task is to produce a STRUCTURED JSON response with exactly the following
-schema (no extra keys, no markdown fences):
+schema (no extra keys, no markdown fences, no commentary):
 
 {
-  "investment_thesis": "<paragraph 1>\\n\\n<paragraph 2>",
-  "risk_factors": {
-    "<Risk Category 1>": "<concise description>",
-    "<Risk Category 2>": "<concise description>",
-    "<Risk Category 3>": "<concise description>"
-  }
+  "bull_analyst_thesis": "<bullish perspective>",
+  "bear_analyst_thesis": "<bearish perspective>",
+  "risk_assessment": "<risk analyst assessment>",
+  "final_synthesis": "<final verdict>"
 }
 
-Rules:
-- investment_thesis: exactly 2 paragraphs separated by a blank line.
-  • Paragraph 1: explain WHY the screened stocks make sense given the CURRENT
-    Indian macro environment (RBI rate stance, INR, FII flows, consumption
-    trends, etc.).  Tie specific tickers to macro themes.
-  • Paragraph 2: explain the portfolio construction rationale – how these
-    names complement each other in terms of sector diversification, risk-
-    adjusted return potential, and alignment with the investor's horizon and
-    risk profile.
-- risk_factors: exactly 3 entries.  Each key is a SHORT category label
-  (e.g. "Macro", "Regulatory", "Valuation", "Liquidity", "Geopolitical").
-  Each value is 1–2 sentences describing the specific risk for THIS shortlist.
-- Do NOT include any text outside the JSON object.
-- Do NOT use markdown code fences.
+ROLE DEFINITIONS:
+1. BULL ANALYST – Focus on upside catalysts. Identify:
+   - Valuation support (P/E vs history, P/B vs peers)
+   - Momentum strength (price > MA50, distance from 52w high)
+   - Sector tailwinds (RBI policy, government capex, consumption, exports)
+   - Fundamental quality (market cap leadership, moats, earnings visibility)
+   - Specific triggers for re-rating (policy, earnings, flows)
+   Reference actual quantitative data points from the shortlist.
+
+2. BEAR ANALYST – Focus on downside protection. Identify:
+   - Valuation risks (P/E premium to 5yr avg, P/B vs book value)
+   - Momentum exhaustion (overbought, narrow breadth, FII selling risk)
+   - Sector headwinds (input costs, regulation, demand slowdown)
+   - Macro vulnerabilities (RBI hikes, INR weakness, crude oil, US yields)
+   - Specific invalidation levels (MA50 break, 52w high resistance, earnings miss)
+   Ground every claim in the provided quantitative metrics.
+
+3. RISK ANALYST – Focus on portfolio fit. Analyse:
+   - Historical volatility (implied from price action vs MA50)
+   - Maximum drawdown potential (distance from 52w high)
+   - Correlation with NIFTY 50 (large-caps typically >0.7)
+   - Sector concentration in the shortlist
+   - Liquidity profile (market cap tiers, trading volume)
+   - Position sizing guidance for the stated risk profile/horizon
+   - Risk-adjusted return expectation (qualitative)
+
+4. FINAL SYNTHESIS – Deliver the verdict:
+   - Net conviction: HIGH / MEDIUM / LOW (explicit label)
+   - Key trade-offs: 2-3 bullet summary of bull vs bear tension
+   - Actionable summary: "Accumulate on dips / Wait for pullback / Avoid"
+   - Position sizing hint: "Core (3-5%), Satellite (1-2%), or Avoid"
+   - MUST NOT guarantee returns or use definitive language ("will", "certain")
+   - MUST include disclaimer: "Not investment advice. For research only."
+
+RULES:
+- Use ONLY the provided quantitative data + your internal knowledge of Indian
+  macro/market structure as of your training cutoff.
+- Do NOT fabricate live news, earnings dates, or management commentary.
+- Do NOT claim to have accessed real-time data or news feeds.
 - Be specific: name actual tickers, sectors, and Indian market dynamics.
+- Keep each section concise (3-6 sentences). No fluff.
+- Output valid JSON only.
 """
+
+def _today_ist() -> str:
+    """Return today's date in IST as a readable string."""
+    from datetime import datetime, timezone, timedelta
+    ist = timezone(timedelta(hours=5, minutes=30))
+    return datetime.now(ist).strftime("%d %B %Y")
 
 
 def _build_user_prompt(
@@ -209,15 +241,8 @@ INVESTOR PROFILE:
 Today's date (IST): {_today_ist()}
 
 Using the stock data above and your knowledge of the current Indian
-macroeconomic and market environment, produce the investment thesis JSON.
+macroeconomic and market environment, produce the four-perspective JSON.
 """
-
-
-def _today_ist() -> str:
-    """Return today's date in IST as a readable string."""
-    from datetime import datetime, timezone, timedelta
-    ist = timezone(timedelta(hours=5, minutes=30))
-    return datetime.now(ist).strftime("%d %B %Y")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -257,8 +282,8 @@ def _call_openai(
                 {"role": "user", "content": user_prompt},
             ],
             max_tokens=max_tokens,
-            temperature=0.4,   # Slightly creative but reproducible
-            seed=42,           # Deterministic sampling where supported
+            temperature=0.4,
+            seed=42,
         )
     except OpenAIError as exc:
         raise RuntimeError(f"OpenAI API error: {exc}") from exc
@@ -292,42 +317,32 @@ def _parse_thesis_response(
     """
     Parse the raw JSON string from the LLM into an AgenticThesisResponse.
 
-    Validates that:
-    - `investment_thesis` is a non-empty string.
-    - `risk_factors` is a dict with exactly 3 string-keyed string-valued entries.
+    Validates that all four required string fields are present and non-empty.
 
     Raises ValueError on schema violations.
     """
     data: Dict[str, Any] = json.loads(raw_json)
 
-    # ── investment_thesis validation ──────────────────────────────────────────
-    thesis: Any = data.get("investment_thesis", "")
-    if not isinstance(thesis, str) or not thesis.strip():
-        raise ValueError(
-            f"'investment_thesis' must be a non-empty string; got {type(thesis)}"
-        )
+    required_fields = [
+        "bull_analyst_thesis",
+        "bear_analyst_thesis",
+        "risk_assessment",
+        "final_synthesis",
+    ]
 
-    # ── risk_factors validation ───────────────────────────────────────────────
-    risk_factors: Any = data.get("risk_factors", {})
-    if not isinstance(risk_factors, dict):
-        raise ValueError(
-            f"'risk_factors' must be a dict; got {type(risk_factors)}"
-        )
-    if len(risk_factors) != 3:
-        logger.warning(
-            "LLM returned %d risk factors instead of 3; using as-is.",
-            len(risk_factors),
-        )
-    for k, v in risk_factors.items():
-        if not isinstance(k, str) or not isinstance(v, str):
+    for field_name in required_fields:
+        value: Any = data.get(field_name, "")
+        if not isinstance(value, str) or not value.strip():
             raise ValueError(
-                f"risk_factors entries must be str→str; got {type(k)}→{type(v)}"
+                f"'{field_name}' must be a non-empty string; got {type(value)}"
             )
 
     return AgenticThesisResponse(
         request_id=request_id,
-        investment_thesis=thesis.strip(),
-        risk_factors=risk_factors,
+        bull_analyst_thesis=data["bull_analyst_thesis"].strip(),
+        bear_analyst_thesis=data["bear_analyst_thesis"].strip(),
+        risk_assessment=data["risk_assessment"].strip(),
+        final_synthesis=data["final_synthesis"].strip(),
         model_used=model_used,
         tokens_used=tokens_used,
     )
@@ -396,7 +411,7 @@ researcher = Agent(
 @researcher.on_event("startup")
 async def handle_startup(ctx: Context) -> None:
     ctx.logger.info("DeepResearcher Agent started.")
-    ctx.logger.info("  Address  : %s", ctx.address)
+    ctx.logger.info("  Address  : %s", ctx.agent.address)
     ctx.logger.info("  Port     : %d", RESEARCHER_PORT)
     ctx.logger.info("  LLM      : %s", OPENAI_MODEL)
     ctx.logger.info(
@@ -442,16 +457,23 @@ async def handle_research_request(
         # waiting indefinitely.
         thesis_response = AgenticThesisResponse(
             request_id=msg.request_id,
-            investment_thesis=(
-                f"[ERROR] The LLM research pipeline encountered an error: {exc}\n\n"
-                "Please verify that OPENAI_API_KEY is set correctly in .env and "
-                "that the model quota has not been exceeded."
+            bull_analyst_thesis=(
+                f"[ERROR] LLM pipeline failed: {exc}. "
+                "Bull case unavailable – verify OPENAI_API_KEY and quota."
             ),
-            risk_factors={
-                "API Error": str(exc),
-                "Action Required": "Check OPENAI_API_KEY and model availability.",
-                "Fallback": "Screened stocks are still valid quant picks.",
-            },
+            bear_analyst_thesis=(
+                "Unable to generate bear case due to LLM error. "
+                "Default to caution: all equities carry downside risk."
+            ),
+            risk_assessment=(
+                "Risk assessment unavailable. Apply standard position sizing: "
+                "max 5% per name, diversify across sectors, respect stop-losses."
+            ),
+            final_synthesis=(
+                "CONVICTION: LOW. LLM research layer degraded. "
+                "Rely on quantitative shortlist only. "
+                "Do not allocate capital without independent verification."
+            ),
             model_used=OPENAI_MODEL,
             tokens_used=0,
         )

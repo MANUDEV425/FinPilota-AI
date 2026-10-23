@@ -105,11 +105,11 @@ RESEARCHER_AGENT_ADDRESS: str = os.getenv(
     "REPLACE_WITH_RESEARCHER_ADDRESS",
 )
 
-# ── Agentverse Mailbox Key ─────────────────────────────────────────────────────
-# Obtain from https://agentverse.ai → My Agents → your agent → Mailbox tab.
-# When set to a non-empty string the Agent constructor will use it; we keep
-# mailbox=True regardless (the library handles both modes).
-AGENTVERSE_MAILBOX_KEY: str = os.getenv("AGENTVERSE_MAILBOX_KEY", "")
+# ── Agentverse Mailbox ─────────────────────────────────────────────────────────
+# Modern uagents (>=0.25) uses `mailbox=True` — no key string needed.
+# On startup, the agent prints an "Agent Inspector" URL.  Open it in your
+# browser, click Connect → Mailbox to bind this agent to your Agentverse
+# account.  Agentverse then buffers inbound messages 24/7.
 
 INR_CRORE: float = 1e7  # 1 Crore = 10,000,000
 
@@ -123,16 +123,15 @@ _pending_chat_senders: Dict[str, str] = {}
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # ── Agent initialisation ───────────────────────────────────────────────────────
-# mailbox=...: Agentverse buffers inbound messages when this process is
+# mailbox=True: Agentverse buffers inbound messages when this process is
 # offline, so the agent remains reachable 24/7 on the decentralised network.
 # The seed is REQUIRED for a stable, deterministic agent address.
-# The mailbox URL format is: "{mailbox_key}@https://agentverse.ai"
 orchestrator = Agent(
     name="FinPilotOrchestrator",
     seed=ORCHESTRATOR_SEED,
     port=ORCHESTRATOR_PORT,
     endpoint=[f"http://localhost:{ORCHESTRATOR_PORT}/submit"],
-    mailbox=f"{AGENTVERSE_MAILBOX_KEY}@https://agentverse.ai" if AGENTVERSE_MAILBOX_KEY else None,
+    mailbox=True,
 )
 
 # ── Agent Chat Protocol (ACP) – required for ASI:One discoverability ───────────
@@ -319,11 +318,7 @@ async def handle_startup(ctx: Context) -> None:
     ctx.logger.info("" * 70)
     ctx.logger.info("  Address    : %s", ctx.agent.address)
     ctx.logger.info("  Port       : %d", ORCHESTRATOR_PORT)
-    ctx.logger.info(
-        "  Mailbox    : %s",
-        "ENABLED (mailbox=True)" if AGENTVERSE_MAILBOX_KEY
-        else "ENABLED (mailbox=True) – connect via Agentverse Inspector",
-    )
+    ctx.logger.info("  Mailbox    : ENABLED (mailbox=True)")
     ctx.logger.info(
         "  Screener   : %s",
         SCREENER_AGENT_ADDRESS
