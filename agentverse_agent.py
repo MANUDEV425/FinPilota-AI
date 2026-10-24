@@ -21,10 +21,14 @@ from uagents_core.contrib.protocols.chat import (
 )
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 1. Agent Initialization
+# 1. Agent Initialization (Hosted Agent: must use clean Agent() without params)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-agent = Agent(name="FinPilotAI")
+agent = Agent()
+
+@agent.on_event("startup")
+async def startup_handler(ctx: Context) -> None:
+    ctx.logger.info("FinPilot AI Cloud Agent is READY on address: %s", agent.address)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # 2. Schemas
@@ -191,19 +195,32 @@ def parse_incoming_text(text: str) -> tuple[bool, str, PortfolioInput]:
       (is_chit_chat, chit_chat_response, portfolio_input)
     """
     raw = text.strip()
-    lowered = raw.lower()
+    
+    # Strip leading @mentions such as @finpilot2, @FinPilot AI, @agent...
+    cleaned = re.sub(r"^@[\w:\.\-]+\s*", "", raw, flags=re.IGNORECASE).strip()
+    lowered = cleaned.lower()
 
-    # 1. Check for greetings / onboarding
-    if lowered in ["hi", "hello", "hey", "help", "who are you", "what can you do", "start"]:
+    # 1. Check for greetings / onboarding / help
+    greeting_words = {"hi", "hello", "hey", "help", "start", "test", "ping", "whoami", "guide"}
+    tokens = re.findall(r"\b[a-zA-Z]+\b", lowered)
+
+    is_greeting_match = (
+        not lowered
+        or (any(w in greeting_words for w in tokens) and len(tokens) <= 4)
+        or lowered in ["who are you", "what can you do", "how does this work", "how to use", "start"]
+    )
+
+    if is_greeting_match:
         welcome_text = (
             "## 👋 Welcome to FinPilot AI on ASI:One!\n\n"
-            "I am your autonomous, portfolio-aware Indian equity research agent. "
-            "You do **not** need to name specific stocks—I discover, screen, and evaluate NIFTY/NSE equities based on your goals.\n\n"
-            "### 💡 Try asking:\n"
-            "- *\"I want to invest 1 lakh in safe Indian stocks for 6 months\"*\n"
-            "- *\"Suggest aggressive high-growth stocks for long term\"*\n"
-            "- *\"Recommend top undervalued blue chips with moderate risk\"*\n"
-            "- Or send a portfolio: `TCS.NS, 20, 3900` or JSON holdings."
+            "I am your autonomous, portfolio-aware Indian equity research agent (NSE/BSE).\n"
+            "You do **not** need to name specific stocks—I discover, screen, and synthesize blue-chip equities tailored to your risk profile.\n\n"
+            "### 💡 Quick Ways to Prompt Me:\n"
+            "- **Natural Language:** *\"I want to invest 1 lakh in safe Indian stocks\"*\n"
+            "- **High Growth:** *\"Suggest aggressive multibagger candidates for long term\"*\n"
+            "- **Blue Chip Value:** *\"Recommend top undervalued stocks with moderate risk\"*\n"
+            "- **Portfolio Health Check:** Send a holding: `TCS.NS, 20, 3900` or JSON portfolio.\n\n"
+            "_Ready when you are! Ask me your investment question below._"
         )
         return True, welcome_text, PortfolioInput()
 

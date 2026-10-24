@@ -619,6 +619,40 @@ async def handle_chat_message(ctx: Context, sender: str, msg: ChatMessage) -> No
     raw_text = raw_text.strip()
     ctx.logger.info("[ACP] Payload text: %s", raw_text[:300])
 
+    # ── Step 2b: Immediate Greeting / Help Fast-Path (Zero External Dependency)
+    cleaned_prompt = re.sub(r"^@[\w:\.\-]+\s*", "", raw_text, flags=re.IGNORECASE).strip()
+    lowered_prompt = cleaned_prompt.lower()
+    greeting_tokens = set(re.findall(r"[a-zA-Z]+", lowered_prompt))
+    greeting_keywords = {"hi", "hello", "hey", "help", "start", "test", "ping", "whoami", "guide"}
+
+    if (
+        not lowered_prompt
+        or (bool(greeting_tokens & greeting_keywords) and len(greeting_tokens) <= 4)
+        or lowered_prompt in ["who are you", "what can you do", "how does this work", "how to use", "start"]
+    ):
+        welcome_md = (
+            "## Welcome to FinPilot AI on ASI:One!\n\n"
+            "I am your autonomous, portfolio-aware Indian equity research agent (NSE/BSE).\n"
+            "You do not need to name specific stocks - I discover, screen, and synthesize blue-chip equities tailored to your risk profile.\n\n"
+            "Quick Ways to Prompt Me:\n"
+            "- Natural Language: 'I want to invest 1 lakh in safe Indian stocks'\n"
+            "- High Growth: 'Suggest aggressive multibagger candidates for long term'\n"
+            "- Blue Chip Value: 'Recommend top undervalued stocks with moderate risk'\n"
+            "- Portfolio Health Check: Send a holding: TCS.NS, 20, 3900 or JSON portfolio.\n\n"
+            "Ready when you are! Ask me your investment question below."
+        )
+        ctx.logger.info("[ACP] Delivering fast greeting response to %s...", sender)
+        await ctx.send(
+            sender,
+            ChatMessage(
+                timestamp=datetime.now(timezone.utc),
+                msg_id=uuid4(),
+                content=[TextContent(type="text", text=welcome_md)],
+            ),
+        )
+        ctx.logger.info("[ACP] Fast greeting delivered successfully to %s", sender)
+        return
+
         # ── Step 3: Resilient Parse: JSON, CSV shorthand, or Natural Language
     portfolio_input = None
     try:
@@ -706,6 +740,33 @@ async def handle_chat_message(ctx: Context, sender: str, msg: ChatMessage) -> No
         **{**portfolio_input.model_dump(), "request_id": request_id}
     )
     _pending_chat_senders[request_id] = sender
+
+    # Timeout guard: Never let ASI:One wait indefinitely if workers or APIs stall
+    async def _timeout_guard(req_id: str, dest_sender: str):
+        await asyncio.sleep(20.0)
+        if req_id in _pending_chat_senders:
+            ctx.logger.warning("[ACP] Request %s timed out. Sending responsive fallback to %s", req_id, dest_sender)
+            del _pending_chat_senders[req_id]
+            fallback_md = (
+                "### FinPilot AI - Analysis Notice\n\n"
+                "Worker agents took longer than 20s to return market data. "
+                "Here are top safe NIFTY 50 blue chips for low-risk allocation:\n\n"
+                "| Ticker | Company | P/E | Sector |\n"
+                "| :--- | :--- | :--- | :--- |\n"
+                "| **HDFCBANK.NS** | HDFC Bank Ltd | 19.5x | Banking |\n"
+                "| **ITC.NS** | ITC Ltd | 29.1x | FMCG |\n"
+                "| **TCS.NS** | Tata Consultancy Services | 30.2x | IT |\n\n"
+                "_Please re-try or ask a specific company question._"
+            )
+            await ctx.send(
+                dest_sender,
+                ChatMessage(
+                    timestamp=datetime.now(timezone.utc),
+                    msg_id=uuid4(),
+                    content=[TextContent(type="text", text=fallback_md)],
+                ),
+            )
+    asyncio.create_task(_timeout_guard(request_id, sender))
     ctx.logger.info(
         "[ACP] Registered chat sender for request_id=%s. Injecting into pipeline…",
         request_id,
